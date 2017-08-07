@@ -13,14 +13,17 @@ PREFIX ?= $(prefix)
 lib_srcs := 
 lib_headers := src/kmkm.hh
 test_srcs := src/test/main.cc
+test_prog := kmkm_tests
 
-tests: $(lib_srcs) $(test_srcs) | $(lib_headers) $(wildcard src/test/*.cc)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) -o $@ $^
+.PHONY: all
+all: $(test_prog)
+
+$(test_prog): $(test_srcs) $(lib_headers) $(wildcard src/test/*.cc)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) -o $@ $<
 
 .PHONY: test
-test: tests
-	./tests -s -r compact
-
+test: $(test_prog)
+	./$(test_prog) -s -r compact
 
 .PHONY: install
 install:
@@ -29,4 +32,4 @@ install:
 
 .PHONY: clean
 clean:
-	rm -f tests
+	rm -f $(test_prog)
