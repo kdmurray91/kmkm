@@ -18,9 +18,6 @@ TEST_CASE("KmerCounter init", "[KmerCounter]") {
             all_zero &= (cv[i] == 0);
         }
         REQUIRE(all_zero);
-
-        KmerIterator i("AAAA", 20);
-        REQUIRE(i.finished());
     }
 
     SECTION("Collision rate") {

@@ -29,12 +29,11 @@ TEST_CASE("KmerIterator basics", "[KmerIterator]") {
 }
 
 
-void _value_test(KmerIterator &ki, vector<uint64_t> &expected)
+void _value_test(KmerIterator &ki, const vector<uint64_t> &expected)
 {
     size_t i = 0;
     while(!ki.finished()) {
         auto got = ki.next();
-        INFO("Testing at " << i << " " << got);
         REQUIRE(got == expected[i++]);
     }
     REQUIRE(i == ki.size());
@@ -43,28 +42,27 @@ void _value_test(KmerIterator &ki, vector<uint64_t> &expected)
 TEST_CASE("kmer values", "[KmerIterator]") {
     SECTION("1mer") {
         KmerIterator ki("ACGTACGT", 1, false);
-        vector<uint64_t> expected {0, 1, 2, 3, 0, 1, 2, 3};
-        size_t i = 0;
-        while(!ki.finished()) {
-            auto got = ki.next();
-            INFO("Testing at " << i << " " << got);
-            REQUIRE(got == expected[i++]);
-        }
-        REQUIRE(i == ki.size());
+        const vector<uint64_t> expected {0, 1, 2, 3, 0, 1, 2, 3};
+        _value_test(ki, expected);
     }
 
     SECTION("1mer canoncial") {
         KmerIterator ki("ACGTACGT", 1, true);
-        vector<uint64_t> expected {0, 1, 1, 0, 0, 1, 1, 0};
-        size_t i = 0;
-        while(!ki.finished()) {
-            auto got = ki.next();
-            INFO("Testing at " << i << " " << got);
-            REQUIRE(got == expected[i++]);
-        }
-        REQUIRE(i == ki.size());
+        const vector<uint64_t> expected {0, 1, 1, 0, 0, 1, 1, 0};
+        _value_test(ki, expected);
     }
 
+    SECTION("4mer") {
+        KmerIterator ki("ACGTACGT", 4, false);
+        const vector<uint64_t> expected {0b00011011, 0b01101100, 0b10110001, 0b11000110, 0b00011011};
+        _value_test(ki, expected);
+    }
+
+    SECTION("4mer canoncial") {
+        KmerIterator ki("ACGTACGT", 4, true);
+        const vector<uint64_t> expected {0b00011011, 0b01101100, 0b10110001, 0b01101100, 0b00011011};
+        _value_test(ki, expected);
+    }
 }
 
 

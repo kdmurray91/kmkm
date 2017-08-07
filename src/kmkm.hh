@@ -204,7 +204,6 @@ public:
         for (auto seq: sequences) this->consume(seq);
     }
 
-
     const vector<T>& counts() const
     {
         return _counts;
@@ -232,10 +231,8 @@ protected:
     const unsigned int _k;
     const bool _use_cbf;
     const bool _canonical;
-
     vector<T> _counts;
     vector<T> _cbf;
-
 };
 
 //typedef KmerCounter<uint8_t> KmerCounter;
