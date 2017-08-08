@@ -10,7 +10,14 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <boost/multi_array.hpp>
+#include <functional>
+
+//#include <boost/multi_array.hpp>
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/vector.hpp>
 
 using namespace std;
 
@@ -59,9 +66,9 @@ static inline uint64_t kmer_revcomp(uint64_t x, int k)
 class KmerIterator
 {
 public:
-    KmerIterator (const string &sequence, int k, bool canoncial=true, int64_t seed=3301)
-        : _k(k) , _seq(sequence) , _len(sequence.size()) , _pos(0) , _canonical(canoncial)
-        , _last_nthash(0) , _mask((1 << (2*k)) - 1)
+    KmerIterator (const string &sequence, int k, bool canonical=true, int64_t seed=3301)
+        : _k(k) , _seq(sequence) , _len(sequence.size()) , _pos(0) , _canonical(canonical)
+        , _last_nthash(0) , _mask((UINT64_C(1) << (2*k)) - 1)
     {
     }
 
@@ -124,6 +131,9 @@ public:
     uint64_t next_hashed()
     {
         return inthash64(this->next());
+        // std::hash not guranteed to be identical between implementations/runs
+        // of program. So use our own.
+        //return std::hash<uint64_t>{}(this->next());
     }
 
     /*! \brief Check if iterator has compeleted iteration
@@ -178,24 +188,73 @@ private:
  *
  *  TODO: Implement CBF counting
  */
-template <typename T>
+template <typename ElType = uint8_t>
 class KmerCounter
 {
 public:
-    KmerCounter (int k, size_t vecsize, bool canoncial=true, bool use_cbf=true, int64_t seed=3301)
+    KmerCounter()
+        : _k(0)
+        , _cbf_tables(0)
+        , _canonical(false)
+    { }
+
+    KmerCounter (int k, size_t vecsize, bool canonical=true, size_t cbf_tables=0, int64_t seed=3301)
         : _k(k)
-        , _use_cbf(use_cbf)
-        , _canonical(canoncial)
+        , _cbf_tables(cbf_tables)
+        , _canonical(canonical)
         , _counts(vecsize, 0)
+        , _cbf((vecsize/2) * _cbf_tables, 0)
     {
+    }
+
+    KmerCounter(KmerCounter&& x)
+        : _k(x._k)
+        , _cbf_tables(x._cbf_tables)
+        , _canonical(x._canonical)
+        , _counts(std::move(x._counts))
+        , _cbf(std::move(x._cbf))
+    { }
+
+    inline KmerCounter & operator=(KmerCounter&& x)
+    {
+        if (this != &x) {
+            _k = x._k;
+            _cbf_tables = x._cbf_tables;
+            _canonical = x._canonical;
+            _counts = std::move(x._counts);
+            _cbf = std::move(x._cbf);
+        }
+    }
+
+    inline void count(uint64_t hashed_kmer)
+    {
+        const size_t cvidx = hashed_kmer % _counts.size();
+
+        ElType current;
+        if (_cbf_tables > 0) {
+            // If using CBF, do a count-min operation to determine current
+            // count.
+            const size_t cbfsize = _counts.size() / 2;
+            const size_t cbfidx = hashed_kmer % cbfsize;
+            current = numeric_limits<ElType>::max();
+            for (size_t t = 0; t < _cbf_tables; t++) {
+                ElType tval = _cbf[t * cbfsize + cbfidx];
+                if (tval < current) {
+                    current = tval;
+                }
+            }
+        } else {
+            // Otherwise, read current count directly from the CV
+            current = _counts[cvidx];
+        }
+        _counts[cvidx] = current + 1;
     }
 
     inline void consume(const string &sequence)
     {
         KmerIterator ki(sequence, _k, _canonical);
         while (!ki.finished()) {
-            auto mer = ki.next_hashed();
-            _counts[mer % _counts.size()]++;
+            this->count(ki.next_hashed());
         }
     }
 
@@ -204,38 +263,78 @@ public:
         for (auto seq: sequences) this->consume(seq);
     }
 
-    const vector<T>& counts() const
+    inline const vector<ElType>& counts() const
     {
         return _counts;
     }
 
-    size_t nnz() const
+    inline size_t nnz() const
     {
         size_t nnz = 0;
         for (auto v: _counts) if (v > 0) nnz++;
         return nnz;
     }
 
-    double collision_rate() const
+    inline double collision_rate() const
     {
         return double(this->nnz()) / double(_counts.size());
     }
-    
+
+    inline int k() const
+    {
+        return _k;
+    }
+
+    void save(const string &filename)
+    {
+        using namespace boost::iostreams;
+        ofstream fp(filename, ios_base::out | ios_base::binary);
+        filtering_streambuf<output> out;
+        out.push(gzip_compressor());
+        out.push(fp);
+        boost::archive::binary_oarchive ar(out);
+        ar << *this;
+    }
+
+    static KmerCounter load(const string &filename)
+    {
+        using namespace boost::iostreams;
+        ifstream fp(filename, ios_base::in | ios_base::binary);
+        filtering_streambuf<input> in;
+        in.push(gzip_decompressor());
+        in.push(fp);
+        boost::archive::binary_iarchive ar(in);
+        KmerCounter<uint8_t> novel;
+        ar >> novel;
+        return novel;
+    }
+
 #if 0
     void consume_from(const string &filename);
-    void save(const string &filename) const;
-    static KmerCounter load(const string &filename);
 #endif
 
 protected:
     const unsigned int _k;
-    const bool _use_cbf;
+    const size_t _cbf_tables;
     const bool _canonical;
-    vector<T> _counts;
-    vector<T> _cbf;
-};
+    vector<ElType> _counts;
+    vector<ElType> _cbf;
 
-//typedef KmerCounter<uint8_t> KmerCounter;
+    // Serialization
+    friend class boost::serialization::access;
+
+    template <typename Archive>
+    void serialize(Archive &ar, const unsigned int version)
+    {
+        ar & const_cast<unsigned int &>(_k);
+        ar & const_cast<bool &>(_canonical);
+        ar & _counts;
+        /* For now, we don't serialise the CBF
+        ar & const_cast<size_t &>(_cbf_tables);
+        ar & _cbf;
+        */
+    }
+};
 
 
 } // end namespace kmercount
