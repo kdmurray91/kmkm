@@ -69,7 +69,7 @@ static inline uint64_t kmer_revcomp(uint64_t x, int k)
 class KmerIterator
 {
 public:
-    KmerIterator (const string &sequence, int k, bool canonical=true, int64_t seed=3301)
+    KmerIterator (const string &sequence, int k, bool canonical=true)
         : _k(k) , _seq(sequence) , _len(sequence.size()) , _pos(0) , _canonical(canonical)
         , _last_nthash(0) , _mask((UINT64_C(1) << (2*k)) - 1)
     {
@@ -201,7 +201,7 @@ public:
         , _canonical(false)
     { }
 
-    KmerCounter (int k, size_t vecsize, bool canonical=true, size_t cbf_tables=0, int64_t seed=3301)
+    KmerCounter (int k, size_t vecsize, bool canonical=true, size_t cbf_tables=0)
         : _k(k)
         , _cbf_tables(cbf_tables)
         , _canonical(canonical)
