@@ -5,8 +5,8 @@ from Cython.Build import cythonize
 setup(
     name="kmkm",
     ext_modules=cythonize(Extension(
-		"kmkm",
-		sources=["kmkm.pyx", ],
-		include_dirs=["src", "src/ext"],
-		language="c++",)),
+        "kmkm/_kmkm",
+        sources=["kmkm/_kmkm.pyx", ],
+        include_dirs=["../src", "../src/ext"],
+        language="c++",)),
 )
