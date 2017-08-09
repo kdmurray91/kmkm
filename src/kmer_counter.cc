@@ -6,7 +6,6 @@
 #include <numeric>
 
 #include "kmkm.hh"
-#include "kmseq.hh"
 
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/program_options.hpp>
@@ -28,13 +27,7 @@ int count_main(CountOpts &opt)
 {
     KmerCounter<> ctr(opt.ksize, UINT64_C(1)<<opt.cvsize);
     for (auto readfile: opt.readfiles) {
-        KSeqReader seqs(readfile);
-
-        size_t n = 0;
-        for (string seq; seqs.next_read(seq);) {
-            ctr.consume(seq);
-            n++;
-        }
+	const size_t n = ctr.consume_from(readfile);
         uint64_t sum = accumulate(ctr.counts().begin(), ctr.counts().end(), 0);
         cerr << ctr.k() << " " << readfile << " " << n << " " << ctr.nnz() <<  " " << sum << " " << endl;
     }

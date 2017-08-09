@@ -2,14 +2,17 @@
 #ifndef KMSEQ_HH_T0ZK1CKV
 #define KMSEQ_HH_T0ZK1CKV
 
-
-
 #include <zlib.h>
+#include <string>
 #include "kseq.h"
 
+namespace kmkm
+{
 namespace kmseq
 {
 
+using namespace std;
+ 
 KSEQ_INIT(gzFile, gzread)  
   
 struct KSeq
@@ -63,6 +66,7 @@ protected:
 };
     
 } /* end namespace kmseq */ 
+} /* end namespace kmkm */ 
 
 #endif /* end of include guard: KMSEQ_HH_T0ZK1CKV */
 

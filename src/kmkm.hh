@@ -13,11 +13,14 @@
 #include <functional>
 
 //#include <boost/multi_array.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/vector.hpp>
+#include "kmseq.hh"
+
 
 using namespace std;
 
@@ -290,7 +293,9 @@ public:
         using namespace boost::iostreams;
         ofstream fp(filename, ios_base::out | ios_base::binary);
         filtering_streambuf<output> out;
-        out.push(gzip_compressor());
+        if (boost::algorithm::ends_with(filename, ".gz")) {
+            out.push(gzip_compressor());
+        }
         out.push(fp);
         boost::archive::binary_oarchive ar(out);
         ar << *this;
@@ -301,17 +306,28 @@ public:
         using namespace boost::iostreams;
         ifstream fp(filename, ios_base::in | ios_base::binary);
         filtering_streambuf<input> in;
-        in.push(gzip_decompressor());
+        if (boost::algorithm::ends_with(filename, ".gz")) {
+            in.push(gzip_decompressor());
+        }
         in.push(fp);
-        boost::archive::binary_iarchive ar(in);
+
         KmerCounter<uint8_t> novel;
+
+        boost::archive::binary_iarchive ar(in);
         ar >> novel;
         return novel;
     }
 
-#if 0
-    void consume_from(const string &filename);
-#endif
+    size_t consume_from(const string &filename)
+    {
+        kmseq::KSeqReader seqs(filename);
+        size_t n = 0;
+        for (string seq; seqs.next_read(seq);) {
+            this->consume(seq);
+            n++;
+        }
+        return n;
+    }
 
 protected:
     const unsigned int _k;
@@ -335,6 +351,21 @@ protected:
         */
     }
 };
+
+#if 0
+/*! \class KmerCounterSet
+ *  \brief Collection of KmerCounters for various samples
+ */
+class KmerCounterSet
+{
+public:
+    KmerCounterSet ();
+    virtual ~KmerCounterSet ();
+private:
+    std::unordered_map<string, KmerCounter> samples;
+};
+
+#endif
 
 
 } // end namespace kmercount
