@@ -26,15 +26,15 @@ struct CountOpts
 int count_main(CountOpts &opt)
 {
     KmerCounter<> ctr(opt.ksize, UINT64_C(1)<<opt.cvsize);
+    size_t nread = 0;
     for (auto readfile: opt.readfiles) {
-	const size_t n = ctr.consume_from(readfile);
-        uint64_t sum = accumulate(ctr.counts().begin(), ctr.counts().end(), 0);
-        cerr << ctr.k() << " " << readfile << " " << n << " " << ctr.nnz() <<  " " << sum << " " << endl;
+        cerr << "  - " << readfile << endl;
+        nread += ctr.consume_from(readfile);
     }
+    cerr << "n_reads: " << nread << endl;
+    cerr << "distinct_kmers: " << ctr.nnz() << endl;
+    cerr << "total_kmers: " << accumulate(ctr.counts().begin(), ctr.counts().end(), 0) << endl;
     ctr.save(opt.outfile);
-    KmerCounter<> loaded(opt.outfile);
-    uint64_t sum = accumulate(loaded.counts().begin(), loaded.counts().end(), 0);
-    cerr << loaded.k() << " " << loaded.nnz() <<  " " << sum << " " << endl;
     return 0;
 }
 
@@ -51,12 +51,12 @@ int parse_args(CountOpts &opt, int argc, char **argv)
             "Counter size (size is 2^N bytes)")
         ("tables,t", po::value<size_t>(&opt.cbf_tables)->default_value(0),
             "Number of counting bloom filter tables. (0 disables the CBF, uses simple count vector)")
-        ("outfile", po::value<string>(&opt.outfile)->required(),
+        ("outfile,o", po::value<string>(&opt.outfile)->required(),
             "Output filename")
         ("readfiles", po::value<vector<string>>(&opt.readfiles)->required(),
             "Input FASTX files");
     po::positional_options_description pos;
-    pos.add("outfile", 1).add("readfiles", -1);
+    pos.add("readfiles", -1);
 
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv)
@@ -83,7 +83,8 @@ int main(int argc, char *argv[])
     int ret = parse_args(opt, argc, argv);
     if (ret != 0) return ret;
 
-    cerr << opt.ksize << endl;
-    cerr << opt.cvsize << endl;
+    cerr << "ksize: " << opt.ksize << endl;
+    cerr << "cvsize: " << opt.cvsize << endl;
+    cerr << "readfiles: " << endl;
     return count_main(opt);
 }

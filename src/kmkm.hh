@@ -124,7 +124,6 @@ public:
     }
 
 
-
     /*! \brief Returns the next k-mer in sequence, after hashing
      *
      *  K-mers are obtained from this->next(), and passed through an integer
@@ -170,6 +169,8 @@ public:
     {
         return max(ssize_t(_len) - _k + 1, ssize_t(0));
     }
+
+
 private:
     const unsigned int _k;
     const string &_seq;
@@ -190,7 +191,6 @@ private:
 /*! \class KmerCounter
  *  \brief Counting Bloom Filter-based k-mer counter
  *
- *  TODO: Implement CBF counting
  */
 template <typename ElType = uint8_t>
 class KmerCounter
