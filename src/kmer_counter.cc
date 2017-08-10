@@ -32,7 +32,7 @@ int count_main(CountOpts &opt)
         cerr << ctr.k() << " " << readfile << " " << n << " " << ctr.nnz() <<  " " << sum << " " << endl;
     }
     ctr.save(opt.outfile);
-    KmerCounter<> loaded = KmerCounter<>::load(opt.outfile);
+    KmerCounter<> loaded(opt.outfile);
     uint64_t sum = accumulate(loaded.counts().begin(), loaded.counts().end(), 0);
     cerr << loaded.k() << " " << loaded.nnz() <<  " " << sum << " " << endl;
     return 0;

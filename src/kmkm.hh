@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <functional>
 
 //#include <boost/multi_array.hpp>
@@ -218,6 +219,14 @@ public:
         , _cbf(std::move(x._cbf))
     { }
 
+    KmerCounter(const string &filename)
+        : _k(0)
+        , _cbf_tables(0)
+        , _canonical(false)
+    {
+        this->load(filename);
+    }
+
     inline KmerCounter & operator=(KmerCounter&& x)
     {
         if (this != &x) {
@@ -301,7 +310,7 @@ public:
         ar << *this;
     }
 
-    static KmerCounter load(const string &filename)
+    void load(const string &filename)
     {
         using namespace boost::iostreams;
         ifstream fp(filename, ios_base::in | ios_base::binary);
@@ -311,11 +320,8 @@ public:
         }
         in.push(fp);
 
-        KmerCounter<uint8_t> novel;
-
         boost::archive::binary_iarchive ar(in);
-        ar >> novel;
-        return novel;
+        ar >> *this;
     }
 
     size_t consume_from(const string &filename)
