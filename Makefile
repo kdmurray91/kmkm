@@ -5,8 +5,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 CXXFLAGS += -std=c++14 -O3 -Wall -g
-CPPFLAGS += -I src -isystem src/ext
-LIBS += -lboost_program_options -lboost_serialization -lboost_iostreams -lz
+CPPFLAGS += -I src -isystem src/ext -fopenmp
+LIBS += -lboost_program_options -lboost_serialization -lboost_iostreams -lz -larmadillo -lhdf5
 
 prefix ?= /usr/local
 PREFIX ?= $(prefix)
@@ -15,16 +15,18 @@ lib_srcs :=
 lib_headers := src/kmkm.hh
 test_srcs := src/test/main.cc
 test_prog := bin/kmkm_tests
-count_prog := bin/kmkm_count
+count_prog := bin/kmer_counter
+blup_prog := bin/kblup
+PROGS = $(blup_prog) $(count_prog)
 
 .PHONY: all
-all: $(test_prog) $(count_prog)
+all: $(test_prog) $(PROGS)
 
-$(test_prog): $(test_srcs) $(lib_headers) $(wildcard src/test/*.cc)
+bin/%: ./src/%.cc $(lib_srcs) $(lib_headers)
 	@mkdir -p bin
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) -o $@ $<
 
-$(count_prog): ./src/kmer_counter.cc $(lib_srcs) $(lib_headers)
+$(test_prog): ./src/test/main.cc $(lib_srcs) $(lib_headers)
 	@mkdir -p bin
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) -o $@ $<
 
@@ -39,4 +41,4 @@ install:
 
 .PHONY: clean
 clean:
-	rm -f $(test_prog) $(count_prog)
+	rm -f $(test_prog) $(PROGS)

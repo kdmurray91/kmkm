@@ -13,7 +13,6 @@
 
 #include "kmkm.hh"
 
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/program_options.hpp>
 
 using namespace std;
