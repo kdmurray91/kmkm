@@ -15,11 +15,13 @@
 
 
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 #define ARMA_USE_HDF5
 #include <armadillo>
 
 using namespace std;
 using namespace kmkm;
+namespace bfs = boost::filesystem;
 
 struct BlupOpts
 {
@@ -27,7 +29,41 @@ struct BlupOpts
     vector<string> countfiles;
     size_t top_n;
     int n_threads;
+    vector<string> samplenames;
 };
+
+bool make_countmat(BlupOpts &opt, fmat &counts)
+{
+    cerr << "Loading individual countfiles into count matrix..." << endl;
+    #pragma omp parallel for schedule(dynamic) num_threads(opt.n_threads) shared(names)
+    for (size_t j = 0; j < nsamp; j++) {
+        const auto & countfile = opt.countfiles[j];
+        KmerCounter<> ctr(countfile);
+        const auto &cv = ctr.counts();
+        const size_t N = opt.top_n == 0 ? cv.size() : opt.top_n; // -n 0 = use all bins
+        for (size_t i = 0; i < n; i++) {
+            counts(i, j) = cv[i];
+        }
+        #pragma omp critical
+        {
+            cout << "  - " << countfile << endl;
+            names[j] = countfile;
+        }
+    }
+
+    cerr << "Save counts...";
+    counts.save(opt.outfile + ".counts.h5", hdf5_binary_trans);
+    cerr << " done" << endl;
+}
+
+bool load_countmat(BlupOpts &opt, fmat &counts)
+{
+    const string cntf = opt.outfile + ".counts.h5";
+    const string samples = opt.outfile + ".samples"
+    if (!boost::filesystem::exists(cntf)) {
+        TODO
+    }
+}
 
 int blup_main(BlupOpts &opt)
 {
@@ -36,6 +72,9 @@ int blup_main(BlupOpts &opt)
     map<size_t, string> names;
 
     fmat counts (opt.top_n, nsamp);
+
+    counts.save(opt.outfile + ".counts.h5", hdf5_binary_trans);
+
 
     cerr << "Loading individual countfiles into count matrix..." << endl;
     #pragma omp parallel for schedule(dynamic) num_threads(opt.n_threads) shared(names)
