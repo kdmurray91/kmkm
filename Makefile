@@ -15,7 +15,7 @@ lib_srcs :=
 lib_headers := src/kmkm.hh
 test_srcs := src/test/main.cc
 test_prog := bin/kmkm_tests
-count_prog := bin/kmer_counter
+count_prog := bin/kmkm_count
 blup_prog := bin/kblup
 PROGS = $(blup_prog) $(count_prog)
 
