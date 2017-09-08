@@ -10,8 +10,10 @@
 #include <vector>
 #include <map>
 #include <numeric>
+#include <omp.h>
 
 #include "kmkm.hh"
+#include "kmercollection.hh"
 
 
 #include <boost/program_options.hpp>
@@ -21,6 +23,8 @@
 
 using namespace std;
 using namespace kmkm;
+using namespace kmercollection;
+using namespace arma;
 namespace bfs = boost::filesystem;
 
 struct BlupOpts
@@ -28,88 +32,49 @@ struct BlupOpts
     string outfile;
     vector<string> countfiles;
     size_t top_n;
-    int n_threads;
     vector<string> samplenames;
 };
 
-bool make_countmat(BlupOpts &opt, fmat &counts)
-{
-    cerr << "Loading individual countfiles into count matrix..." << endl;
-    #pragma omp parallel for schedule(dynamic) num_threads(opt.n_threads) shared(names)
-    for (size_t j = 0; j < nsamp; j++) {
-        const auto & countfile = opt.countfiles[j];
-        KmerCounter<> ctr(countfile);
-        const auto &cv = ctr.counts();
-        const size_t N = opt.top_n == 0 ? cv.size() : opt.top_n; // -n 0 = use all bins
-        for (size_t i = 0; i < n; i++) {
-            counts(i, j) = cv[i];
-        }
-        #pragma omp critical
-        {
-            cout << "  - " << countfile << endl;
-            names[j] = countfile;
-        }
-    }
-
-    cerr << "Save counts...";
-    counts.save(opt.outfile + ".counts.h5", hdf5_binary_trans);
-    cerr << " done" << endl;
-}
-
-bool load_countmat(BlupOpts &opt, fmat &counts)
-{
-    const string cntf = opt.outfile + ".counts.h5";
-    const string samples = opt.outfile + ".samples"
-    if (!boost::filesystem::exists(cntf)) {
-        TODO
-    }
-}
-
 int blup_main(BlupOpts &opt)
 {
-    using namespace arma;
-    const size_t nsamp = opt.countfiles.size();
-    map<size_t, string> names;
-
-    fmat counts (opt.top_n, nsamp);
-
-    counts.save(opt.outfile + ".counts.h5", hdf5_binary_trans);
-
-
-    cerr << "Loading individual countfiles into count matrix..." << endl;
-    #pragma omp parallel for schedule(dynamic) num_threads(opt.n_threads) shared(names)
-    for (size_t j = 0; j < nsamp; j++) {
-        const auto & countfile = opt.countfiles[j];
-        KmerCounter<> ctr(countfile);
-        const auto &cv = ctr.counts();
-        const size_t N = opt.top_n == 0 ? cv.size() : opt.top_n; // -n 0 = use all bins
-        for (size_t i = 0; i < n; i++) {
-            counts(i, j) = cv[i];
+    fmat freq;
+    {
+        KmerCollection samps(opt.top_n);
+        if (samps.load(opt.outfile, opt.countfiles)) {
+            cerr << "Using saved counts... ";
+            for (const auto &sn: samps.names()) {
+                cout << "  - " << sn << endl;
+            }
+        } else {
+            samps.add_samples(opt.countfiles);
+            samps.save(opt.outfile);
         }
-        #pragma omp critical
-        {
-            cout << "  - " << countfile << endl;
-            names[j] = countfile;
-        }
+
+        cerr << "Normalise, scale and centre counts... ";
+         // L1 norm of counts, dim0 (cols, i.e. samples) have unit length
+        freq = normalise(samps.counts(), 1, 0);
     }
-
-    cerr << "Save counts...";
-    counts.save(opt.outfile + ".counts.h5", hdf5_binary_trans);
-    cerr << " done" << endl;
-
-    cerr << "Calc covar...";
-    fmat freq = counts;//normalise(counts, 1, 0);
-    freq.save(opt.outfile + ".freq.h5", hdf5_binary_trans);
     auto ukmer = mean(freq, 1); // Row mean
     auto sdkmer = stddev(freq, 0, 1); // row stddev with N-1 norm
     freq.each_col() -= ukmer;
     freq.each_col() /= sdkmer;
-    freq.save(opt.outfile + ".normfreq.h5", hdf5_binary_trans);
+    // Remove NANs
+    freq.for_each([](fmat::elem_type& v) { if (!is_finite(v)) v = 0.; });
+    cerr << "and save them... ";
+    freq.save(opt.outfile + ".scaledcounts", hdf5_binary_trans);
+    cerr << "done" << endl;
+
+    cerr << "Calc covar...";
     fmat covar = cov(freq);
+    cerr << "and save it...";
+    covar.save(opt.outfile + ".covar", csv_ascii);
     cerr << " done" << endl;
 
-    cerr << "Save covar...";
-    covar.save(opt.outfile + ".covar.asc", csv_ascii);
+
+    cerr << "Calc cor...";
+    fmat correl = cor(freq);
+    cerr << "and save it...";
+    correl.save(opt.outfile + ".cor", csv_ascii);
     cerr << " done" << endl;
 
     return 0;
@@ -118,18 +83,19 @@ int blup_main(BlupOpts &opt)
 int parse_args(BlupOpts &opt, int argc, char **argv)
 {
     namespace po = boost::program_options;
+    int num_threads;
     po::options_description flags("Options");
     flags.add_options()
         ("help,h",
             "Print this help")
-        ("threads,t", po::value<int>(&opt.n_threads)->default_value(16),
+        ("threads,t", po::value<int>(&num_threads)->default_value(16),
             "Number of parallel threads")
         ("top-n,n", po::value<size_t>(&opt.top_n)->default_value(1000000),
             "Number of count vector entries to consider")
         ("outfile,o", po::value<string>(&opt.outfile)->required(),
             "Output filename")
         ("countfiles", po::value<vector<string>>(&opt.countfiles)->required(),
-            "Input FASTX files");
+            "Input count vector files (.kmr/.kmr.gz)");
     po::positional_options_description pos;
     pos.add("countfiles", -1);
 
@@ -148,6 +114,7 @@ int parse_args(BlupOpts &opt, int argc, char **argv)
         cerr << flags << endl;
         return 1;
     }
+    omp_set_num_threads(num_threads);
     return 0;
 }
 
@@ -159,7 +126,7 @@ int main(int argc, char *argv[])
     if (ret != 0) return ret;
 
     cout << "top_n: " << opt.top_n << endl;
-    cout << "countfiles: " << endl;
+    cout << "samples: " << endl;
     return blup_main(opt);
 }
 
