@@ -4,20 +4,19 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-CXXFLAGS += -std=c++14 -O3 -Wall -g
-CPPFLAGS += -I src -isystem src/ext -fopenmp
-LIBS += -lboost_program_options -lboost_serialization -lboost_iostreams -lz -larmadillo -lhdf5
+CXXFLAGS += -std=c++14 -O3 -Wall -g $(shell pkg-config --cflags hdf5 zlib)
+CPPFLAGS += -I src -isystem src/ext -fopenmp # -fsanitize=address
+LIBS += -lboost_filesystem -lboost_system -lboost_program_options -lboost_serialization -lboost_iostreams -larmadillo $(shell pkg-config --libs hdf5 zlib)
 
 prefix ?= /usr/local
 PREFIX ?= $(prefix)
 
 lib_srcs := 
-lib_headers := src/kmkm.hh
+lib_headers := src/kmkm.hh src/kmseq.hh src/kmercollection.hh
 test_srcs := src/test/main.cc
 test_prog := bin/kmkm_tests
-count_prog := bin/kmer_counter
-blup_prog := bin/kblup
-PROGS = $(blup_prog) $(count_prog)
+count_prog := bin/kmkm_count
+PROGS = $(count_prog)
 
 .PHONY: all
 all: $(test_prog) $(PROGS)

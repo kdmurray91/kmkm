@@ -280,6 +280,11 @@ public:
         return _counts;
     }
 
+    inline const ElType * data() const
+    {
+        return _counts.data();
+    }
+
     inline size_t nnz() const
     {
         size_t nnz = 0;
@@ -351,27 +356,8 @@ protected:
         ar & const_cast<unsigned int &>(_k);
         ar & const_cast<bool &>(_canonical);
         ar & _counts;
-        /* For now, we don't serialise the CBF
-        ar & const_cast<size_t &>(_cbf_tables);
-        ar & _cbf;
-        */
     }
 };
-
-#if 0
-/*! \class KmerCounterSet
- *  \brief Collection of KmerCounters for various samples
- */
-class KmerCounterSet
-{
-public:
-    KmerCounterSet ();
-    virtual ~KmerCounterSet ();
-private:
-    std::unordered_map<string, KmerCounter> samples;
-};
-
-#endif
 
 
 } // end namespace kmercount
