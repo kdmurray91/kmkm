@@ -280,6 +280,11 @@ public:
         return _counts;
     }
 
+    inline const ElType * data() const
+    {
+        return _counts.data();
+    }
+
     inline size_t nnz() const
     {
         size_t nnz = 0;
