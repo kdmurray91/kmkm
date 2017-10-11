@@ -5,68 +5,10 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from ._kmkm import PyKmerCounter as KmerCounter
-import zarr
-import numpy as np
 from .logger import LOGGER as LOG, enable_logging
-from mem_top import mem_top
+from .collection import KmerCollection
 
 __all__ = [
     "KmerCounter",
     "KmerCollection",
 ]
-
-
-class KmerCounterSet(object):
-
-    def __init__(self, ksize, cvsize, canonical=True, cbf_tables=0):
-        self.ksize = ksize
-        self.cvsize = cvsize
-        self.canonical = canonical
-        self.cbf_tables = cbf_tables
-        self.global_array = zarr.zeros((0, cvsize))
-        self.samples = []
-
-    def count_file(self, filename):
-        ctr = KmerCounter(self.ksize, self.cvsize, self.canonical,
-                          self.cbf_tables)
-        ctr.consume_from(filename)
-        self.global_array = np.concatenate((self.global_array, ctr.counts()), axis=0)
-        self.samples.append(filename)
-
-
-class KmerCollection(object):
-
-    def __init__(self, outprefix):
-        self.outprefix = outprefix
-        self.array = zarr.open_array(outprefix + '.zarr', mode='w',
-                                     shape=(0, 0), chunks=(1, 2**20),
-                                     dtype='u1', compressor=zarr.Blosc('zstd', clevel=7))
-        self.samples = self.array.attrs.get("samples", [])
-
-    def _fname_to_sample(self, fname):
-        from os.path import basename
-        bn = basename(fname)
-        for ext in [".gz", ".kmr"]:
-            if bn.endswith(ext):
-                bn = bn[:-len(ext)]
-        return bn
-
-    def add_file(self, filename):
-        LOG.info("Adding %s", filename)
-        kmr = KmerCounter(filename=filename)
-        nrow, ncol = self.array.shape
-        if ncol == 0:
-            ncol = kmr.cvsize
-            self.array.resize(0, ncol)
-        elif ncol != kmr.cvsize:
-            raise ValueError("Kmer counter size mismatch at " + filename)
-        self.samples.append(self._fname_to_sample(filename))
-        LOG.debug("shape before adding %s: %r", filename, self.array.shape)
-        LOG.debug("shape of %s:  %r",filename,  kmr.counts().shape)
-        self.array.append(kmr.counts(), axis=0)
-        LOG.debug("shape after %r", self.array.shape)
-        LOG.debug(mem_top())
-
-    def add_files(self, filenames):
-        for f in filenames:
-            self.add_file(f)
