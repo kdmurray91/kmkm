@@ -14,7 +14,7 @@
 
 #include "kmkm.hh"
 #include "kmercollection.hh"
-
+#include "minheap.hh"
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
@@ -38,6 +38,7 @@ struct BlupOpts
 int blup_main(BlupOpts &opt)
 {
     fmat freq;
+
     {
         KmerCollection samps(opt.top_n);
         if (samps.load(opt.outfile, opt.countfiles)) {

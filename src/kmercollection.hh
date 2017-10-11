@@ -13,12 +13,14 @@
 #include <vector>
 #include <stdexcept>
 #include <exception>
+#include <set>
 
 #include <boost/filesystem.hpp>
 #define ARMA_USE_HDF5
 #include <armadillo>
 
 #include "kmkm.hh"
+#include "minheap.hh"
 
 
 namespace kmercollection
@@ -67,10 +69,42 @@ public:
     void add_samples(const vector<string> &samples)
     {
         const size_t nsamp = samples.size();
+        set<size_t> global_idx;
+        size_t global_maxidx = -1LL;
 
         _samplenames.clear();
         _samplenames.assign(nsamp, "");
         _counts.set_size(_top_n, nsamp);
+
+        cerr << "Determinging minimal indicies..." << endl;
+        #pragma omp parallel for schedule(dynamic) default(shared)
+        for (size_t j = 0; j < nsamp; j++) {
+            const auto &countfile = samples[j];
+            vector<size_t> sparseidx;
+            KmerCounter<> ctr(countfile);
+            const auto &cv = ctr.counts();
+            for (size_t i = 0; i < global_maxidx && sparseidx.size() < _top_n; i++) {
+                if (cv[i] != 0) {
+                    sparseidx.push_back(i);
+                }
+            }
+            const string name = normalise_samplename(countfile);
+            #pragma omp critical
+            {
+                auto it = global_idx.begin();
+                for (const auto &v: sparseidx) {
+                    while (global_idx.size() >= _top_n) {
+                        // Pop last object
+                        global_idx.erase(--global_idx.end());
+                    }
+                    it = global_idx.emplace_hint(it, v);
+                }
+                global_maxidx = *global_idx.rbegin();
+                cerr << "  - " << name << ", max is " << global_maxidx << endl;
+            }
+        }
+        for (const auto & i: global_idx)
+            cerr << i << endl;
 
         cerr << "Loading individual countfiles into count matrix..." << endl;
         #pragma omp parallel for schedule(dynamic) default(shared)
@@ -78,9 +112,9 @@ public:
             const auto &countfile = samples[j];
             KmerCounter<> ctr(countfile);
             const auto &cv = ctr.counts();
-            const size_t N = _top_n == 0 ? cv.size() : _top_n;
-            for (size_t i = 0; i < N; i++) {
-                _counts(i, j) = cv[i];
+            size_t row = 0;
+            for (const auto &i: global_idx) {
+                _counts(row++, j) = cv[i];
             }
 
             const string name = normalise_samplename(countfile);
