@@ -13,7 +13,7 @@ setup(
     ext_modules=cythonize(Extension(
         "kmkm._kmkm",
         sources=["kmkm/_kmkm.pyx", ],
-        include_dirs=["../src", "../src/ext"],
+        include_dirs=["src", "src/ext"],
         extra_compile_args=['-std=c++14', ],
         libraries=['boost_serialization', 'boost_system', 'boost_filesystem',
                    'boost_iostreams', 'z'],
