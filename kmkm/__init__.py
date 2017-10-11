@@ -11,4 +11,5 @@ from .collection import KmerCollection
 __all__ = [
     "KmerCounter",
     "KmerCollection",
+    "enable_logging",
 ]

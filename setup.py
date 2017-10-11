@@ -11,6 +11,7 @@ inst_deps = [
 
 setup(
     name="kmkm",
+    packages=['kmkm',],
     ext_modules=cythonize(Extension(
         "kmkm._kmkm",
         sources=["kmkm/_kmkm.pyx", ],
