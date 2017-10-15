@@ -5,13 +5,15 @@ import numpy as np
 
 inst_deps = [
     'zarr',
+    'zict',
+    'lmdb',
     'numpy',
 ]
 
 
 setup(
     name="kmkm",
-    packages=['kmkm',],
+    packages=['kmkm', ],
     ext_modules=cythonize(Extension(
         "kmkm._kmkm",
         sources=["kmkm/_kmkm.pyx", ],
