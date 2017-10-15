@@ -6,6 +6,7 @@
 
 import dask
 import zarr
+from zict import LMDB
 import numpy as np
 
 from os.path import basename
@@ -17,9 +18,10 @@ from .logger import LOGGER as LOG, enable_logging
 class KmerCollection(object):
     def __init__(self, outprefix, mode='a', ksize=0, cvsize=0, cbf_tables=0):
         self.outprefix = outprefix
-        self.array = zarr.open_array(outprefix + '.zarr', mode=mode,
-                                     shape=(0, 0), chunks=(1, 2**20),
-                                     dtype='u1', compressor=zarr.Blosc('zstd', clevel=7))
+        self.store = LMDB(outprefix + '.zarr')
+        self.array = zarr.open_array(store=self.store, mode=mode, shape=(0, 0),
+                                     chunks=(1, 2**20), dtype='u1',
+                                     compressor=zarr.Blosc('zstd', clevel=3))
         self.array.attrs['samples'] = self.array.attrs.get("samples", [])
         LOG.debug("Opened array at %s. Size %r, samples %r", outprefix,
                   self.array.shape, self.samples)
