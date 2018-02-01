@@ -241,6 +241,10 @@ public:
     inline void count(uint64_t hashed_kmer)
     {
         const size_t cvidx = hashed_kmer % _counts.size();
+        if (_counts.size() == 0) {
+            throw "CBF not initialised";
+        }
+
 
         ElType current;
         if (_cbf_tables > 0) {
@@ -294,6 +298,7 @@ public:
 
     inline double collision_rate() const
     {
+        if (_counts.size() == 0) return -1;
         return double(this->nnz()) / double(_counts.size());
     }
 
