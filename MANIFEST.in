@@ -1,0 +1,3 @@
+include src/*/*
+include src/*.hh
+include kmkm/*.cpp
