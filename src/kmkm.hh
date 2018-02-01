@@ -333,8 +333,8 @@ public:
     {
         kmseq::KSeqReader seqs(filename);
         size_t n = 0;
-        for (string seq; seqs.next_read(seq);) {
-            this->consume(seq);
+        for (kmseq::KSeq seq; seqs.next_read(seq);) {
+            this->consume(seq.seq);
             n++;
         }
         return n;
