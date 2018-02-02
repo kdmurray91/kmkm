@@ -32,7 +32,6 @@ class KmerCollection(object):
         else:
             LOG.debug("Opening existing array at %s", outfile)
             self.array = zarr.open(outfile, mode=mode)
-            print(self.array.attrs.asdict())
         self.array.attrs['samples'] = self.array.attrs.get("samples", [])
 
         LOG.debug("Opened array at %s. Size %r, samples %r", outfile,
