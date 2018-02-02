@@ -22,6 +22,8 @@ cdef extern from "kmkm.hh" namespace "kmkm":
         KmerCounter(int ksize, size_t cvsize, bool canonical, size_t cbf_tables) except +
         void consume_from(const string &filename) except +
         void consume(const string &sequence) except +
+        void save(const string &filename) except +
+        void load(const string &filename) except +
         vector[T] & counts() except +
         const T* data() except +
         int k() except +
@@ -163,6 +165,9 @@ cdef class PyKmerCounter:
     def counts(self):
         n = np.asarray(<np.uint8_t[:self.cvsize]>self.ctr.data())
         return n.reshape((1, self.cvsize))
+
+    def save(self, str filename):
+        self.ctr.save(filename.encode("utf-8"))
 
     def __dealloc__(self):
         if self.ctr is not NULL:

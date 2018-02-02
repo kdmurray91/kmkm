@@ -5,6 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import logging as L
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 __all__ = [
     'enable_logging',
@@ -18,6 +19,6 @@ LOGGER.addHandler(L.NullHandler())
 
 def enable_logging(level=L.INFO):
     s = L.StreamHandler()
-    s.setFormatter(L.Formatter('%(asctime)s: %(message)s'))
+    s.setFormatter(L.Formatter('[%(asctime)s] %(message)s', "%H:%M:%S"))
     s.setLevel(level)
     LOGGER.addHandler(s)

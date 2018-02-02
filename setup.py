@@ -23,6 +23,10 @@ setup(
                    'boost_iostreams', 'z'],
         language="c++",)),
     install_requires=inst_deps,
+    entry_points="""
+        [console_scripts]
+        kmkm=kmkm.main:main
+    """,
     setup_requires=[
         'numpy',
     ],
