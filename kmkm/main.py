@@ -48,7 +48,7 @@ main.add_command(count_file)
 @click.option('-a', '--append', default=False, is_flag=True)
 @click.option('-v', '--verbose', count=True)
 @click.option('-q', '--quiet', default=False, is_flag=True)
-def aggregate(outfile, seqfiles, ksize, cvsize, append, quiet, verbose):
+def counteach(outfile, seqfiles, ksize, cvsize, append, quiet, verbose):
     handle_logging_args(verbose, quiet)
     LOG.info("Counting sequence files...")
     mode = "a" if append else "w"
@@ -56,7 +56,7 @@ def aggregate(outfile, seqfiles, ksize, cvsize, append, quiet, verbose):
     for f in seqfiles:
         kc.count_seqfile(f)
     LOG.info("All done!")
-main.add_command(aggregate)
+main.add_command(counteach)
 
 @click.command("aggregate")
 @click.argument('outfile', required=True, type=Path())
