@@ -68,6 +68,8 @@ class KmerCollection(object):
 
     def add_file(self, filename):
         LOG.info("Adding %s", filename)
+        if os.path.isdir(filename):
+            raise ValueError("%s must be a file", filename)
         kmr = KmerCounter(filename=filename)
         self._add_counter(kmr, filename)
 

@@ -54,7 +54,7 @@ cdef class PySeq:
 
     def __repr__(self):
         if not self.name and not self.seq:
-            return "Empty Sequence"
+            return ""
         if self.qual:
             return "@{}\n{}\n+\n{}\n".format(
                 self.name.decode('utf-8'),

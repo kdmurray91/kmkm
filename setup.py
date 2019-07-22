@@ -29,5 +29,6 @@ setup(
     """,
     setup_requires=[
         'numpy',
+        'cython',
     ],
 )
