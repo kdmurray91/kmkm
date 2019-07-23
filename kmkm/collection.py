@@ -17,7 +17,7 @@ from .logger import LOGGER as LOG, enable_logging
 
 
 class KmerCollection(object):
-    def __init__(self, outfile, mode='a', ksize=0, cvsize=0, cbf_tables=0):
+    def __init__(self, outfile, mode='a', ksize=0, cvsize=0, cbf_tables=0, chunks=(2**3, 2**17)):
         self.outfile = outfile
         if mode.startswith("w"):
             if exists(outfile):
@@ -26,8 +26,8 @@ class KmerCollection(object):
         if not exists(outfile):
             LOG.debug("Opening new array at %s", outfile)
             self.array = zarr.open(
-                outfile, mode=mode, shape=(0, 0), chunks=(1, 2**24),
-                dtype='u1', compressor=Blosc('zstd', clevel=3)
+                outfile, mode=mode, shape=(0, 0), chunks=chunks,
+                dtype='u1', compressor=Blosc('zstd', clevel=8)
             )
         else:
             LOG.debug("Opening existing array at %s", outfile)
@@ -42,7 +42,7 @@ class KmerCollection(object):
 
     def _fname_to_sample(self, fname):
         bn = basename(fname)
-        for ext in [".gz", ".kmr", ".fastq", ".fasta"]:
+        for ext in [".gz", ".bz2", ".kmr", ".fastq", ".fasta"]:
             if bn.endswith(ext):
                 bn = bn[:-len(ext)]
         return bn
@@ -64,28 +64,28 @@ class KmerCollection(object):
         LOG.info("Counting %s", filename)
         kmr = KmerCounter(self.ksize, self.cvsize, cbf_tables=self.cbf_tables)
         kmr.count_file(filename)
-        self._add_counter(kmr, filename)
+        self.add_counter(kmr, filename)
 
     def add_file(self, filename):
         LOG.info("Adding %s", filename)
         if os.path.isdir(filename):
             raise ValueError("%s must be a file", filename)
         kmr = KmerCounter(filename=filename)
-        self._add_counter(kmr, filename)
+        self.add_counter(kmr, filename)
 
-    def _add_counter(self, kmr, filename):
+    def add_counter(self, kmr, samplename):
         nrow, ncol = self.array.shape
         if ncol == 0:
             ncol = kmr.cvsize
             self.array.resize(0, ncol)
         elif ncol != kmr.cvsize:
-            raise ValueError("Kmer counter size mismatch at " + filename)
-        sname = self._fname_to_sample(filename)
+            raise ValueError("Kmer counter size mismatch at " + samplename)
+        sname = self._fname_to_sample(samplename)
         if sname in self.samples:
             raise ValueError("Duplcate sample name! (" + sname + ")")
         self.samples = self.samples + [sname]
-        LOG.debug("shape before adding %s: %r", filename, self.array.shape)
-        LOG.debug("shape of %s:  %r", filename,  kmr.counts().shape)
+        LOG.debug("shape before adding %s: %r", samplename, self.array.shape)
+        LOG.debug("shape of %s:  %r", samplename,  kmr.counts().shape)
         self.array.append(kmr.counts(), axis=0)
         LOG.debug("shape after %r", self.array.shape)
         LOG.debug("samples after %r", self.samples)
