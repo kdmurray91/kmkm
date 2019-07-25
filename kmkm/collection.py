@@ -74,21 +74,20 @@ class KmerCollection(object):
         self.add_counter(kmr, filename)
 
     def add_counter(self, kmr, samplename):
+        self.add_counts(kmr.counts(), samplename)
+
+    def add_counts(self, countvec, samplename):
         nrow, ncol = self.array.shape
         if ncol == 0:
-            ncol = kmr.cvsize
+            ncol = countvec.shape[1]
             self.array.resize(0, ncol)
-        elif ncol != kmr.cvsize:
+        elif ncol != countvec.shape[1]:
             raise ValueError("Kmer counter size mismatch at " + samplename)
         sname = self._fname_to_sample(samplename)
         if sname in self.samples:
             raise ValueError("Duplcate sample name! (" + sname + ")")
         self.samples = self.samples + [sname]
-        LOG.debug("shape before adding %s: %r", samplename, self.array.shape)
-        LOG.debug("shape of %s:  %r", samplename,  kmr.counts().shape)
-        self.array.append(kmr.counts(), axis=0)
-        LOG.debug("shape after %r", self.array.shape)
-        LOG.debug("samples after %r", self.samples)
+        self.array.append(countvec, axis=0)
 
     def add_files(self, filenames):
         for f in filenames:

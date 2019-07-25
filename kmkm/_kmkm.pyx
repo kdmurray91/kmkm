@@ -10,6 +10,7 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp cimport bool
 from libc.stdint cimport uint8_t
+import cython
 from cython.operator import dereference as deref
 cimport numpy as np
 import numpy as np
@@ -43,7 +44,6 @@ cdef extern from "kmseq.hh" namespace "kmseq":
 
 ctypedef KmerCounter[uint8_t] KmerCounterU8
 
-@cython.auto_pickle(True)
 cdef class PySeq:
     cdef KSeq *kseq
 
@@ -105,7 +105,6 @@ cdef class PySeq:
             self.kseq = NULL
 
 
-@cython.auto_pickle(True)
 cdef class PySeqReader:
     cdef KSeqReader *rdr
 
@@ -137,7 +136,6 @@ cdef class PySeqReader:
             self.rdr = NULL
 
 
-@cython.auto_pickle(True)
 cdef class PyKmerCounter:
     cdef readonly int ksize
     cdef readonly size_t cvsize
