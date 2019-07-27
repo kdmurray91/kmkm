@@ -1,6 +1,6 @@
 # distutils: language = c++
 #
-# Copyright (c) 2017 Kevin Murray <kdmfoss@gmail.com>
+# Copyright (c) 2015-2019 Kevin Murray <foss@kdmurray.id.au>
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -21,10 +21,11 @@ cdef extern from "kmkm.hh" namespace "kmkm":
         KmerCounter()
         KmerCounter(const string &filename)
         KmerCounter(int ksize, size_t cvsize, bool canonical, size_t cbf_tables) except +
-        void consume_from(const string &filename) except +
-        void consume(const string &sequence) except +
-        void save(const string &filename) except +
-        void load(const string &filename) except +
+        void consume_from(const string &filename) nogil except +
+        void consume(const string &sequence) nogil except +
+        void clear() except +
+        void save(const string &filename) nogil except +
+        void load(const string &filename) nogil except +
         vector[T] & counts() except +
         const T* data() except +
         int k() except +
@@ -160,7 +161,13 @@ cdef class PyKmerCounter:
             self.ctr.consume(seq.seq)
 
     def count_file(self, str filename):
-        self.ctr.consume_from(filename.encode("utf-8"))
+        fnameenc = filename.encode("utf-8")
+        cdef char* fname = fnameenc
+        with nogil:
+            self.ctr.consume_from(fname)
+
+    def clear(self):
+        self.ctr.clear()
 
     def counts(self):
         n = np.asarray(<np.uint8_t[:self.cvsize]>self.ctr.data())

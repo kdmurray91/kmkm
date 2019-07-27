@@ -279,6 +279,12 @@ public:
         for (auto seq: sequences) this->consume(seq);
     }
 
+    void clear()
+    {
+        std::fill(_counts.begin(), _counts.end(), 0);
+        std::fill(_cbf.begin(), _cbf.end(), 0);
+    }
+
     inline const vector<ElType>& counts() const
     {
         return _counts;
