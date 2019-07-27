@@ -66,7 +66,7 @@ public:
         if (l < 1) return false;
         ks.name.assign(_seq->name.s, _seq->name.l);
         ks.seq.assign(_seq->seq.s, _seq->seq.l);
-        ks.qual.assign(_seq->seq.s, _seq->seq.l);
+        ks.qual.assign(_seq->qual.s, _seq->qual.l);
         return true;
     }
 
@@ -77,7 +77,7 @@ public:
             if (count >= sequences.size()) {
                 sequences.emplace_back();
             }
-            if (!this->next_read(sequences.back())) break;
+            if (!this->next_read(sequences[count])) break;
         }
         sequences.resize(count);
         return count;
@@ -128,11 +128,17 @@ public:
 
     bool next_pair(KSeqPair &ks)
     {
+        bool r1, r2;
         if (_interleaved) {
-            return _r1.next_read(ks.r1) && _r1.next_read(ks.r2);
+            r1 = _r1.next_read(ks.r1);
+            r2 = _r1.next_read(ks.r2);
         } else {
-            return _r1.next_read(ks.r1) && _r2.next_read(ks.r2);
+            r1 = _r1.next_read(ks.r1);
+            r2 = _r2.next_read(ks.r2);
         }
+        if (r1 && r2) return true;
+        else if (!r1 && !r2) return false;
+        else throw runtime_error("Mismatch between number of reads in R1 and R2 files");
     }
 
     size_t next_chunk(vector<KSeqPair> &pairs, size_t max)
@@ -168,11 +174,12 @@ inline std::ostream &operator<<(std::ostream &out, const kmseq::KSeq &r)
 }
 
 inline std::ostream &operator<<(std::ostream &out, const kmseq::KSeqPair &rp)
-{ 
+{
     out << rp.r1;
     out << rp.r2;
     return out;
 }
+
 
 #endif /* end of include guard: KMSEQ_HH_T0ZK1CKV */
 
